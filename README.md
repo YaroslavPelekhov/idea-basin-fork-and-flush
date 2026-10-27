@@ -20,15 +20,20 @@ periodically gives several fresh agents the same verified checkpoint and the
 same task, but no inherited discussion history. Each branch explores
 independently. A frozen evaluator then decides which checkpoint should continue.
 
-```text
-verified checkpoint
-        |
-        +-- fresh branch A -- candidate A -- evaluator --+
-        +-- fresh branch B -- candidate B -- evaluator --+--> best valid checkpoint
-        +-- fresh branch C -- candidate C -- evaluator --+
-        +-- fresh branch D -- candidate D -- evaluator --+
-                                                        |
-                                              repeat within one budget
+```mermaid
+flowchart LR
+    C[Verified checkpoint] --> F{Fork}
+    F --> A[Fresh branch A]
+    F --> B[Fresh branch B]
+    F --> D[Fresh branch C]
+    F --> G[Fresh branch D]
+    A --> E[Frozen evaluator]
+    B --> E
+    D --> E
+    G --> E
+    E --> S[Select the best valid checkpoint]
+    S --> W[Continue the winning branch]
+    W -. next scheduled fork within the same aggregate budget .-> F
 ```
 
 The package provides the deterministic control layer:
