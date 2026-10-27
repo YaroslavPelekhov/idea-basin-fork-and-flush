@@ -2,12 +2,10 @@
 
 A portable skill for running **budget-matched Fork-and-Flush searches** in Codex
 or Claude Code. It gives an agent a reproducible way to explore several
-independent approaches, keep the best verified checkpoint, and account for the
-entire shared budget.
+independent approaches, keep the best checkpoint, and manage one shared budget.
 
-An optional second workflow builds a validated map of the mechanisms explored
-during the search. The map is for analysis and navigation; it never replaces
-the task's real evaluator.
+An optional second workflow builds a map of the mechanisms explored during the
+search so that users can inspect idea families and transitions between them.
 
 > This is an independent implementation inspired by *Fork-and-Flush: Escaping
 > Idea Basins in Autoresearch Agents* (Cai et al., arXiv:2610.07447v1). It is not
@@ -16,22 +14,22 @@ the task's real evaluator.
 ## The idea in one minute
 
 Ordinary long-running agents can become attached to one approach. Fork-and-Flush
-periodically gives several fresh agents the same verified checkpoint and the
+periodically gives several fresh agents the same current checkpoint and the
 same task, but no inherited discussion history. Each branch explores
 independently. A frozen evaluator then decides which checkpoint should continue.
 
 ```mermaid
 flowchart LR
-    C[Verified checkpoint] --> F{Fork}
+    C[Current checkpoint] --> F{Fork}
     F --> A[Fresh branch A]
     F --> B[Fresh branch B]
     F --> D[Fresh branch C]
     F --> G[Fresh branch D]
-    A --> E[Frozen evaluator]
+    A --> E[Task evaluator]
     B --> E
     D --> E
     G --> E
-    E --> S[Select the best valid checkpoint]
+    E --> S[Select the best checkpoint]
     S --> W[Continue the winning branch]
     W -. next scheduled fork within the same aggregate budget .-> F
 ```
@@ -39,8 +37,8 @@ flowchart LR
 The package provides the deterministic control layer:
 
 - an exact branch schedule and aggregate budget ledger;
-- immutable checkpoint and evaluation records;
-- validation and best-ever checkpoint selection;
+- checkpoint and evaluation records;
+- best-ever checkpoint selection;
 - append-only, resumable run artifacts;
 - optional idea-map construction and diagnostics.
 
@@ -48,7 +46,7 @@ Codex or Claude Code still creates the isolated workspaces and fresh sessions
 using the host capabilities available in that runtime. The controller records
 those actions instead of pretending to expose a universal session API.
 
-## When to use it
+## What you need
 
 Use this skill when all of the following are true:
 
@@ -59,9 +57,6 @@ Use this skill when all of the following are true:
 
 Typical examples include program optimization, architecture search, scientific
 fitting, geometric optimization, and long-horizon research agents.
-
-Do not use it as a substitute for an evaluator on subjective work. Do not use a
-basin label or map coordinate as a quality score.
 
 ## Install
 
@@ -92,9 +87,7 @@ python3 scripts/install.py --target claude
 python3 scripts/install.py --target codex --codex-dir /custom/skills
 ```
 
-The installer will not overwrite a modified installation unless `--replace` is
-provided. Replacement first creates a timestamped backup outside the skill
-directory.
+Use `--replace` to update an existing installation.
 
 ## Quick start: run a search
 
@@ -104,8 +97,8 @@ The example below maximizes a score under a shared budget of one million tokens:
 
 ```bash
 python3 scripts/fnf.py init-run \
-  --run-dir runs/circle-packing \
-  --task-id circle-packing-9 \
+  --run-dir runs/my-task \
+  --task-id my-task \
   --budget 1000000 \
   --unit tokens \
   --direction max \
@@ -139,7 +132,7 @@ python3 scripts/fnf.py plan \
   --triggers 0 0.33 0.66
 ```
 
-### 3. Record verified checkpoints
+### 3. Record checkpoints
 
 Each checkpoint is a JSON record with its lineage, score, artifact, evidence,
 digest, and cumulative aggregate usage:
@@ -164,7 +157,7 @@ Append it to the run ledger:
 
 ```bash
 python3 scripts/fnf.py record-checkpoint \
-  --run-dir runs/circle-packing \
+  --run-dir runs/my-task \
   --json checkpoint.json \
   --require-files
 ```
@@ -173,12 +166,12 @@ python3 scripts/fnf.py record-checkpoint \
 
 ```bash
 python3 scripts/fnf.py select \
-  runs/circle-packing/checkpoints.jsonl \
+  runs/my-task/checkpoints.jsonl \
   --direction max \
   --budget 1000000 \
   --require-files
 
-python3 scripts/fnf.py status --run-dir runs/circle-packing
+python3 scripts/fnf.py status --run-dir runs/my-task
 ```
 
 Selection happens only among valid checkpoints reached inside the declared
@@ -268,33 +261,6 @@ comparable.
 
 Run `python3 scripts/fnf.py COMMAND --help` for complete arguments.
 
-## Verified behavior
-
-The integration suite covers three deliberately different fixtures:
-
-| Fixture | Objective | Budget unit |
-|---|---:|---|
-| Nine-circle packing | maximize | tokens |
-| Route length | minimize | cost in micro-USD |
-| DCLM validation | maximize | credits |
-
-Across these fixtures the tests verify that:
-
-- aggregate schedule accounting is exact;
-- invalid checkpoints cannot win;
-- checkpoints obtained after the budget cutoff are excluded;
-- maximize and minimize objectives use the same controller;
-- installation, backup, resume, and synthetic mapping paths work.
-
-Run the complete suite:
-
-```bash
-python3 -m pip install pytest
-python3 -m pytest -q -c /dev/null --confcutdir=tests tests
-```
-
-Current result: **17 passed**.
-
 ## Repository layout
 
 ```text
@@ -312,15 +278,5 @@ Current result: **17 passed**.
 └── tests/                          # unit and cross-task integration tests
 ```
 
-## Important guarantees and non-guarantees
-
-The package guarantees deterministic schedule construction, auditable records,
-budget-bound selection, checkpoint validation, and explicit evidence provenance
-when used as documented.
-
-It does **not** guarantee that branching improves every task, that the runtime
-exposes a hard usage counter, or that every search contains meaningful idea
-basins. It also does not claim the gains reported in the paper for a new task.
-
-For the complete experimental invariants, read [`SKILL.md`](SKILL.md) and the
-documents in [`references/`](references/).
+For complete workflow details, read [`SKILL.md`](SKILL.md) and the documents in
+[`references/`](references/).

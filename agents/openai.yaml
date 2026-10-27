@@ -1,6 +1,6 @@
 interface:
   display_name: "Idea-Basin Fork-and-Flush"
-  short_description: "Budgeted search with validated basin maps"
-  default_prompt: "Use $idea-basin-fork-and-flush to optimize this measurable task and audit its idea basins."
+  short_description: "Budgeted branching search with optional idea maps"
+  default_prompt: "Use $idea-basin-fork-and-flush to explore independent approaches to this task within one shared budget."
 policy:
   allow_implicit_invocation: true
